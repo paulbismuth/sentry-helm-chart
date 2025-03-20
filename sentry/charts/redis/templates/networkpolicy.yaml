@@ -26,9 +26,9 @@ spec:
           protocol: UDP
     # Allow outbound connections to other cluster pods
     - ports:
-        - port: {{ .Values.master.containerPort }}
+        - port: {{ .Values.master.containerPorts.redis }}
         {{- if .Values.sentinel.enabled }}
-        - port: {{ .Values.sentinel.containerPort }}
+        - port: {{ .Values.sentinel.containerPorts.sentinel }}
         {{- end }}
       to:
         - podSelector:
@@ -41,9 +41,9 @@ spec:
   ingress:
     # Allow inbound connections
     - ports:
-        - port: {{ .Values.master.containerPort }}
+        - port: {{ .Values.master.containerPorts.redis }}
         {{- if .Values.sentinel.enabled }}
-        - port: {{ .Values.sentinel.containerPort }}
+        - port: {{ .Values.sentinel.containerPorts.sentinel }}
         {{- end }}
       {{- if not .Values.networkPolicy.allowExternal }}
       from:
@@ -52,11 +52,15 @@ spec:
               {{ template "common.names.fullname" . }}-client: "true"
         - podSelector:
             matchLabels: {{- include "common.labels.matchLabels" . | nindent 14 }}
-        {{- if .Values.networkPolicy.ingressNSMatchLabels }}
+        {{- if or .Values.networkPolicy.ingressNSMatchLabels .Values.networkPolicy.ingressNSPodMatchLabels }}
         - namespaceSelector:
             matchLabels:
-              {{- range $key, $value := .Values.networkPolicy.ingressNSMatchLabels }}
-              {{ $key | quote }}: {{ $value | quote }}
+              {{- if .Values.networkPolicy.ingressNSMatchLabels }}
+                {{- range $key, $value := .Values.networkPolicy.ingressNSMatchLabels }}
+                {{ $key | quote }}: {{ $value | quote }}
+                {{- end }}
+              {{ else }}
+                {}
               {{- end }}
           {{- if .Values.networkPolicy.ingressNSPodMatchLabels }}
           podSelector:

@@ -3,11 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ template "common.names.fullname" . }}
-  {{- if .Values.metrics.serviceMonitor.namespace }}
-  namespace: {{ .Values.metrics.serviceMonitor.namespace }}
-  {{- else }}
-  namespace: {{ .Release.Namespace | quote }}
-  {{- end }}
+  namespace: {{ default .Release.Namespace .Values.metrics.serviceMonitor.namespace | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.metrics.serviceMonitor.additionalLabels }}
     {{- include "common.tplvalues.render" (dict "value" .Values.metrics.serviceMonitor.additionalLabels "context" $) | nindent 4 }}
@@ -20,7 +16,7 @@ metadata:
   {{- end }}
 spec:
   endpoints:
-    - port: tcp-metrics
+    - port: http-metrics
       {{- if .Values.metrics.serviceMonitor.interval }}
       interval: {{ .Values.metrics.serviceMonitor.interval }}
       {{- end }}
@@ -36,6 +32,9 @@ spec:
       {{- if .Values.metrics.serviceMonitor.metricRelabelings }}
       metricRelabelings: {{- toYaml .Values.metrics.serviceMonitor.metricRelabelings | nindent 6 }}
       {{- end }}
+  {{- if .Values.metrics.serviceMonitor.podTargetLabels }}
+  podTargetLabels: {{- toYaml .Values.metrics.serviceMonitor.podTargetLabels | nindent 4 }}
+  {{- end }}
   namespaceSelector:
     matchNames:
       - {{ .Release.Namespace }}

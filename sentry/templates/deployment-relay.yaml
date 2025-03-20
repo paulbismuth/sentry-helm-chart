@@ -69,9 +69,21 @@ spec:
           args:
             - "credentials"
             - "generate"
+{{- if .Values.relay.init.additionalArgs }}
+{{ toYaml .Values.relay.init.additionalArgs | indent 12 }}
+{{- end }}
+          resources:
+{{ toYaml .Values.relay.init.resources | indent 12 }}
+{{- if .Values.relay.containerSecurityContext }}
+          securityContext:
+{{ toYaml .Values.relay.containerSecurityContext | indent 12 }}
+{{- end }}
           env:
             - name: RELAY_PORT
               value: '{{ template "relay.port" }}'
+{{- if .Values.relay.init.env }}
+{{ toYaml .Values.relay.init.env | indent 12 }}
+{{- end }}
           volumeMounts:
             - name: credentials
               mountPath: /work/.relay
@@ -79,6 +91,9 @@ spec:
               mountPath: /work/.relay/config.yml
               subPath: config.yml
               readOnly: true
+{{- if .Values.relay.init.volumeMounts }}
+{{ toYaml .Values.relay.volumeMounts | indent 12 }}
+{{- end }}
       {{- if .Values.dnsPolicy }}
       dnsPolicy: {{ .Values.dnsPolicy | quote }}
       {{- end }}
@@ -88,6 +103,10 @@ spec:
       {{- end }}
       containers:
       - name: {{ .Chart.Name }}-relay
+{{- if .Values.relay.args }}
+        args:
+{{ toYaml .Values.relay.args | indent 10 }}
+{{- end }}
         image: "{{ template "relay.image" . }}"
         imagePullPolicy: {{ default "IfNotPresent" .Values.images.sentry.pullPolicy }}
         ports:
@@ -105,6 +124,13 @@ spec:
             mountPath: /work/.relay/config.yml
             subPath: config.yml
             readOnly: true
+          {{- if .Values.geodata.volumeName }}
+          - name: {{ .Values.geodata.volumeName }}
+            mountPath: {{ .Values.geodata.mountPath }}
+          {{- end }}
+{{- if .Values.relay.volumeMounts }}
+{{ toYaml .Values.relay.volumeMounts | indent 10 }}
+{{- end }}
         livenessProbe:
           failureThreshold: {{ .Values.relay.probeFailureThreshold }}
           httpGet:
@@ -127,6 +153,10 @@ spec:
           timeoutSeconds: {{ .Values.relay.probeTimeoutSeconds }}
         resources:
 {{ toYaml .Values.relay.resources | indent 12 }}
+{{- if .Values.relay.containerSecurityContext }}
+        securityContext:
+{{ toYaml .Values.relay.containerSecurityContext | indent 12 }}
+{{- end }}
 {{- if .Values.relay.sidecars }}
 {{ toYaml .Values.relay.sidecars | indent 6 }}
 {{- end }}

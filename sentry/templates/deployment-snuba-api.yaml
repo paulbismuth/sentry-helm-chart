@@ -64,6 +64,10 @@ spec:
       - name: {{ .Chart.Name }}-snuba
         image: "{{ template "snuba.image" . }}"
         imagePullPolicy: {{ default "IfNotPresent" .Values.images.snuba.pullPolicy }}
+      {{- if .Values.snuba.api.command }}
+        command:
+{{ toYaml .Values.snuba.api.command | indent 8 }}
+      {{- end }}
         ports:
         - containerPort: {{ template "snuba.port" }}
         env:
@@ -78,10 +82,13 @@ spec:
         - mountPath: /etc/snuba
           name: config
           readOnly: true
+{{- if .Values.snuba.api.volumeMounts }}
+{{ toYaml .Values.snuba.api.volumeMounts | indent 8 }}
+{{- end }}
         livenessProbe:
           failureThreshold: 5
           httpGet:
-            path: /
+            path: /health
             port: {{ template "snuba.port" }}
             scheme: HTTP
           initialDelaySeconds: {{ .Values.snuba.api.probeInitialDelaySeconds }}
@@ -91,7 +98,7 @@ spec:
         readinessProbe:
           failureThreshold: 10
           httpGet:
-            path: /
+            path: /health
             port: {{ template "snuba.port" }}
             scheme: HTTP
           initialDelaySeconds: {{ .Values.snuba.api.probeInitialDelaySeconds }}
@@ -100,6 +107,10 @@ spec:
           timeoutSeconds: {{ .Values.snuba.api.readiness.timeoutSeconds }}
         resources:
 {{ toYaml .Values.snuba.api.resources | indent 12 }}
+{{- if .Values.snuba.api.containerSecurityContext }}
+        securityContext:
+{{ toYaml .Values.snuba.api.containerSecurityContext | indent 12 }}
+{{- end }}
 {{- if .Values.snuba.api.sidecars }}
 {{ toYaml .Values.snuba.api.sidecars | indent 6 }}
 {{- end }}

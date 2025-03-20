@@ -1,3 +1,4 @@
+architecture: standalone
 audit:
   clientMinMessages: error
   logConnections: false
@@ -7,51 +8,95 @@ audit:
   logTimezone: ""
   pgAuditLog: ""
   pgAuditLogCatalog: "off"
+auth:
+  database: ""
+  enablePostgresUser: true
+  existingSecret: ""
+  password: ""
+  postgresPassword: ""
+  replicationPassword: ""
+  replicationUsername: repl_user
+  secretKeys:
+    adminPasswordKey: postgres-password
+    replicationPasswordKey: replication-password
+    userPasswordKey: password
+  usePasswordFiles: false
+  username: ""
+clusterDomain: cluster.local
 commonAnnotations: {}
-containerSecurityContext:
-  enabled: true
-  runAsUser: 1001
-customLivenessProbe: {}
-customReadinessProbe: {}
+commonLabels: {}
+containerPorts:
+  postgresql: 5432
+diagnosticMode:
+  args:
+  - infinity
+  command:
+  - sleep
+  enabled: false
 extraDeploy: []
-extraEnv: []
+fullnameOverride: ""
 global:
-  postgresql: {}
+  imagePullSecrets: []
+  imageRegistry: ""
+  postgresql:
+    auth:
+      database: ""
+      existingSecret: ""
+      password: ""
+      postgresPassword: ""
+      secretKeys:
+        adminPasswordKey: ""
+        replicationPasswordKey: ""
+        userPasswordKey: ""
+      username: ""
+    service:
+      ports:
+        postgresql: ""
+  storageClass: ""
 image:
   debug: false
+  digest: ""
   pullPolicy: IfNotPresent
+  pullSecrets: []
   registry: docker.io
   repository: bitnami/postgresql
-  tag: 11.10.0-debian-10-r60
+  tag: 15.3.0-debian-11-r0
+kubeVersion: ""
 ldap:
-  baseDN: ""
-  bind_password: null
-  bindDN: ""
+  basedn: ""
+  binddn: ""
+  bindpw: ""
   enabled: false
   port: ""
   prefix: ""
   scheme: ""
-  search_attr: ""
-  search_filter: ""
+  searchAttribute: ""
+  searchFilter: ""
   server: ""
   suffix: ""
-  tls: {}
-  url: ""
-livenessProbe:
-  enabled: true
-  failureThreshold: 6
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  successThreshold: 1
-  timeoutSeconds: 5
+  tls:
+    enabled: false
+  uri: ""
 metrics:
+  containerPorts:
+    metrics: 9187
+  containerSecurityContext:
+    enabled: true
+    runAsNonRoot: true
+    runAsUser: 1001
+  customLivenessProbe: {}
+  customMetrics: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
   enabled: false
-  extraEnvVars: {}
+  extraEnvVars: []
   image:
+    digest: ""
     pullPolicy: IfNotPresent
+    pullSecrets: []
     registry: docker.io
     repository: bitnami/postgres-exporter
-    tag: 0.8.0-debian-10-r328
+    tag: 0.12.0-debian-11-r86
   livenessProbe:
     enabled: true
     failureThreshold: 6
@@ -60,8 +105,8 @@ metrics:
     successThreshold: 1
     timeoutSeconds: 5
   prometheusRule:
-    additionalLabels: {}
     enabled: false
+    labels: {}
     namespace: ""
     rules: []
   readinessProbe:
@@ -71,139 +116,316 @@ metrics:
     periodSeconds: 10
     successThreshold: 1
     timeoutSeconds: 5
-  securityContext:
-    enabled: false
-    runAsUser: 1001
+  resources:
+    limits: {}
+    requests: {}
   service:
     annotations:
-      prometheus.io/port: "9187"
+      prometheus.io/port: '{{ .Values.metrics.service.ports.metrics }}'
       prometheus.io/scrape: "true"
-    loadBalancerIP: null
-    type: ClusterIP
+    clusterIP: ""
+    ports:
+      metrics: 9187
+    sessionAffinity: None
   serviceMonitor:
-    additionalLabels: {}
     enabled: false
+    honorLabels: false
+    interval: ""
+    jobLabel: ""
+    labels: {}
+    metricRelabelings: []
+    namespace: ""
+    relabelings: []
+    scrapeTimeout: ""
+    selector: {}
+  startupProbe:
+    enabled: false
+    failureThreshold: 15
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+nameOverride: ""
 networkPolicy:
-  allowExternal: true
+  egressRules:
+    customRules: {}
+    denyConnectionsToExternal: false
   enabled: false
-  explicitNamespacesSelector: {}
-persistence:
-  accessModes:
-  - ReadWriteOnce
-  annotations: {}
-  enabled: true
-  mountPath: /bitnami/postgresql
-  selector: {}
-  size: 8Gi
-  subPath: ""
+  ingressRules:
+    primaryAccessOnlyFrom:
+      customRules: {}
+      enabled: false
+      namespaceSelector: {}
+      podSelector: {}
+    readReplicasAccessOnlyFrom:
+      customRules: {}
+      enabled: false
+      namespaceSelector: {}
+      podSelector: {}
+  metrics:
+    enabled: false
+    namespaceSelector: {}
+    podSelector: {}
 postgresqlDataDir: /bitnami/postgresql/data
-postgresqlDbUserConnectionLimit: null
-postgresqlMaxConnections: null
-postgresqlPghbaRemoveFilters: null
-postgresqlPostgresConnectionLimit: null
 postgresqlSharedPreloadLibraries: pgaudit
-postgresqlStatementTimeout: null
-postgresqlTcpKeepalivesCount: null
-postgresqlTcpKeepalivesIdle: null
-postgresqlTcpKeepalivesInterval: null
-postgresqlUsername: postgres
 primary:
   affinity: {}
   annotations: {}
-  extraInitContainers: []
+  args: []
+  command: []
+  configuration: ""
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+  customLivenessProbe: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
+  existingConfigmap: ""
+  existingExtendedConfigmap: ""
+  extendedConfiguration: ""
+  extraEnvVars: []
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  extraPodSpec: {}
   extraVolumeMounts: []
   extraVolumes: []
+  hostAliases: []
+  hostIPC: false
+  hostNetwork: false
+  initContainers: []
+  initdb:
+    args: ""
+    password: ""
+    postgresqlWalDir: ""
+    scripts: {}
+    scriptsConfigMap: ""
+    scriptsSecret: ""
+    user: ""
   labels: {}
-  nodeAffinityPreset:
-    key: ""
-    type: ""
-    values: []
-  nodeSelector: {}
-  podAffinityPreset: ""
-  podAnnotations: {}
-  podAntiAffinityPreset: soft
-  podLabels: {}
-  priorityClassName: ""
-  service: {}
-  sidecars: []
-  tolerations: []
-primaryAsStandBy:
-  enabled: false
-psp:
-  create: false
-rbac:
-  create: false
-readReplicas:
-  affinity: {}
-  annotations: {}
-  extraInitContainers: []
-  extraVolumeMounts: []
-  extraVolumes: []
-  labels: {}
+  lifecycleHooks: {}
+  livenessProbe:
+    enabled: true
+    failureThreshold: 6
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  name: primary
   nodeAffinityPreset:
     key: ""
     type: ""
     values: []
   nodeSelector: {}
   persistence:
+    accessModes:
+    - ReadWriteOnce
+    annotations: {}
+    dataSource: {}
     enabled: true
+    existingClaim: ""
+    labels: {}
+    mountPath: /bitnami/postgresql
+    selector: {}
+    size: 8Gi
+    storageClass: ""
+    subPath: ""
+  pgHbaConfiguration: ""
   podAffinityPreset: ""
   podAnnotations: {}
   podAntiAffinityPreset: soft
   podLabels: {}
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
   priorityClassName: ""
-  resources: {}
-  service: {}
+  readinessProbe:
+    enabled: true
+    failureThreshold: 6
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  resources:
+    limits: {}
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  schedulerName: ""
+  service:
+    annotations: {}
+    clusterIP: ""
+    externalTrafficPolicy: Cluster
+    extraPorts: []
+    headless:
+      annotations: {}
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    nodePorts:
+      postgresql: ""
+    ports:
+      postgresql: 5432
+    sessionAffinity: None
+    sessionAffinityConfig: {}
+    type: ClusterIP
   sidecars: []
+  standby:
+    enabled: false
+    primaryHost: ""
+    primaryPort: ""
+  startupProbe:
+    enabled: false
+    failureThreshold: 15
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  terminationGracePeriodSeconds: ""
   tolerations: []
-readinessProbe:
-  enabled: true
-  failureThreshold: 6
-  initialDelaySeconds: 5
-  periodSeconds: 10
-  successThreshold: 1
-  timeoutSeconds: 5
+  topologySpreadConstraints: []
+  updateStrategy:
+    rollingUpdate: {}
+    type: RollingUpdate
+psp:
+  create: false
+rbac:
+  create: false
+  rules: []
+readReplicas:
+  affinity: {}
+  annotations: {}
+  args: []
+  command: []
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+  customLivenessProbe: {}
+  customReadinessProbe: {}
+  customStartupProbe: {}
+  extendedConfiguration: ""
+  extraEnvVars: []
+  extraEnvVarsCM: ""
+  extraEnvVarsSecret: ""
+  extraPodSpec: {}
+  extraVolumeMounts: []
+  extraVolumes: []
+  hostAliases: []
+  hostIPC: false
+  hostNetwork: false
+  initContainers: []
+  labels: {}
+  lifecycleHooks: {}
+  livenessProbe:
+    enabled: true
+    failureThreshold: 6
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  name: read
+  nodeAffinityPreset:
+    key: ""
+    type: ""
+    values: []
+  nodeSelector: {}
+  persistence:
+    accessModes:
+    - ReadWriteOnce
+    annotations: {}
+    dataSource: {}
+    enabled: true
+    existingClaim: ""
+    labels: {}
+    mountPath: /bitnami/postgresql
+    selector: {}
+    size: 8Gi
+    storageClass: ""
+    subPath: ""
+  podAffinityPreset: ""
+  podAnnotations: {}
+  podAntiAffinityPreset: soft
+  podLabels: {}
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  priorityClassName: ""
+  readinessProbe:
+    enabled: true
+    failureThreshold: 6
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 5
+  replicaCount: 1
+  resources:
+    limits: {}
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  schedulerName: ""
+  service:
+    annotations: {}
+    clusterIP: ""
+    externalTrafficPolicy: Cluster
+    extraPorts: []
+    headless:
+      annotations: {}
+    loadBalancerIP: ""
+    loadBalancerSourceRanges: []
+    nodePorts:
+      postgresql: ""
+    ports:
+      postgresql: 5432
+    sessionAffinity: None
+    sessionAffinityConfig: {}
+    type: ClusterIP
+  sidecars: []
+  startupProbe:
+    enabled: false
+    failureThreshold: 15
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  terminationGracePeriodSeconds: ""
+  tolerations: []
+  topologySpreadConstraints: []
+  updateStrategy:
+    rollingUpdate: {}
+    type: RollingUpdate
 replication:
   applicationName: my_application
-  enabled: false
   numSynchronousReplicas: 0
-  password: repl_password
-  readReplicas: 1
   synchronousCommit: "off"
-  user: repl_user
-resources:
-  requests:
-    cpu: 250m
-    memory: 256Mi
-securityContext:
-  enabled: true
-  fsGroup: 1001
-service:
-  annotations: {}
-  port: 5432
-  type: ClusterIP
 serviceAccount:
+  annotations: {}
+  automountServiceAccountToken: true
+  create: false
+  name: ""
+serviceBindings:
   enabled: false
 shmVolume:
-  chmod:
-    enabled: true
   enabled: true
+  sizeLimit: ""
 tls:
-  certCAFilename: null
+  autoGenerated: false
+  certCAFilename: ""
   certFilename: ""
   certKeyFilename: ""
   certificatesSecret: ""
-  crlFilename: null
+  crlFilename: ""
   enabled: false
   preferServerCiphers: true
-updateStrategy:
-  type: RollingUpdate
 volumePermissions:
+  containerSecurityContext:
+    runAsUser: 0
   enabled: false
   image:
-    pullPolicy: Always
+    digest: ""
+    pullPolicy: IfNotPresent
+    pullSecrets: []
     registry: docker.io
-    repository: bitnami/minideb
-    tag: buster
-  securityContext:
-    runAsUser: 0
+    repository: bitnami/bitnami-shell
+    tag: 11-debian-11-r115
+  resources:
+    limits: {}
+    requests: {}

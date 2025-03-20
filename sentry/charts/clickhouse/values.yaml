@@ -31,6 +31,11 @@ clickhouse:
     max_concurrent_queries: "100"
     max_connections: "4096"
     max_session_timeout: "3600"
+    merge_tree:
+      enabled: false
+      max_part_loading_threads: auto
+      parts_to_delay_insert: 150
+      parts_to_throw_insert: 300
     mlock_executable: false
     profiles:
       enabled: false
@@ -84,11 +89,6 @@ clickhouse:
   imageVersion: "19.14"
   ingress:
     enabled: false
-  init:
-    image: busybox
-    imagePullPolicy: IfNotPresent
-    imageVersion: 1.31.0
-    resources: {}
   interserver_http_port: "9009"
   livenessProbe:
     enabled: true

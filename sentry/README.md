@@ -63,7 +63,7 @@ Note: this table is incomplete, so have a look at the values.yaml in case you mi
 | `serviceAccount.enabled`                      | If `true`, a custom Service Account will be used.                                                                                                                   | `false`                        |
 | `serviceAccount.name`                         | The base name of the ServiceAccount to use. Will be appended with e.g. `snuba` or `web` for the pods accordingly.                                                   | `"sentry"`                     |
 | `serviceAccount.automountServiceAccountToken` | Automount API credentials for a Service Account.                                                                                                                    | `true`                         |
-| `system.secretKey`                            | secret key for the session cookie ([documentation](https://develop.sentry.dev/config/#general))                                                                     | `nil`                          |
+| `sentry.existingSecret`                       | Existing kubernetes secret to be used for secret key for the session cookie ([documentation](https://develop.sentry.dev/config/#general))                                                                     | `nil`                          |
 | `sentry.features.vstsLimitedScopes`           | Disables the azdo-integrations with limited scopes that is the cause of so much pain                                                                                | `true`                         |
 | `sentry.web.customCA.secretName`              | Allows mounting a custom CA secret                                                                                                                                  | `nil`                          |
 | `sentry.web.customCA.item`                    | Key of CA cert object within the secret                                                                                                                             | `ca.crt`                       |
@@ -76,13 +76,12 @@ By default, NGINX is enabled to allow sending the incoming requests to [Sentry R
 
 ## Sentry secret key
 
-For your security, the [`system.secret-key`](https://develop.sentry.dev/config/#general) is generated for you on the first installation. Another one will be regenerated on each upgrade invalidating all the current sessions unless it's been provided. The value is stored in the `sentry-sentry` configmap.
+If no `sentry.existingSecret` value is specified, for your security, the [`system.secret-key`](https://develop.sentry.dev/config/#general) is generated for you on the first installation and stored in a kubernetes secret.
 
-```
-helm upgrade ... --set system.secretKey=xx
-```
+If `sentry.existingSecret` / `sentry.existingSecretKey` values are provided, those secrets will be used.
 
-## Symbolicator
+
+## Symbolicator and or JavaScript source maps
 
 For getting native stacktraces and minidumps symbolicated with debug symbols (e.g. iOS/Android), you need to enable Symbolicator via
 
@@ -108,6 +107,89 @@ Note: If you need to run or cannot avoid running sentry-worker and sentry-web on
 So you would want to create and use a `StorageClass` with a supported volume driver like [AWS EFS](https://github.com/kubernetes-sigs/aws-efs-csi-driver)
 
 Its also important having `connect_to_reserved_ips: true` in the symbolicator config file, which this Chart defaults to.
+
+#### Source Maps
+
+To get javascript source map processing working, you need to activate sourcemaps, which in turn activates the memcached dependency:
+
+```yaml
+sourcemaps:
+  enabled: true
+```
+
+For details on the background see this blog post: https://engblog.yext.com/post/sentry-js-source-maps
+
+
+## Geolocation
+
+[Geolocation of IP addresses](https://develop.sentry.dev/self-hosted/geolocation/) is supported if you provide a GeoIP database:
+
+Example values.yaml:
+
+```yaml
+
+relay:
+  # provide a volume for relay that contains the geoip database
+  volumes:
+    - name: geoip
+      hostPath:
+        path: /geodata
+        type: Directory
+
+
+sentry:
+  web:
+    # provide a volume for sentry-web that contains the geoip database
+    volumes:
+      - name: geoip
+        hostPath:
+          path: /geodata
+          type: Directory
+
+  worker:
+    # provide a volume for sentry-worker that contains the geoip database
+    volumes:
+      - name: geoip
+        hostPath:
+          path: /geodata
+          type: Directory
+
+
+# enable and reference the volume
+geodata:
+  volumeName: geoip
+  # mountPath of the volume containing the database
+  mountPath: /geodata
+  # path to the geoip database inside the volumemount
+  path: /geodata/GeoLite2-City.mmdb
+```
+
+## External Kafka configuration
+
+You can either provide a single host, which is there by default in `values.yaml`, like this:
+
+```yaml
+externalKafka:
+  ## Hostname or ip address of external kafka
+  ##
+  host: "kafka-confluent"
+  port: 9092
+```
+
+or you can feed in a cluster of Kafka instances like below:
+
+```yaml
+externalKafka:
+  ## List of Hostnames or ip addresses of external kafka
+  - host: "233.5.100.28"
+    port: 9092
+  - host: "233.5.100.29"
+    port: 9092
+  - host: "233.5.100.30"
+    port: 9092
+```
+
+
 
 # Usage
 

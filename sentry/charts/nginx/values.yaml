@@ -1,131 +1,109 @@
 affinity: {}
+args: []
 autoscaling:
   enabled: false
+  maxReplicas: ""
+  minReplicas: ""
+  targetCPU: ""
+  targetMemory: ""
 cloneStaticSiteFromGit:
+  branch: ""
   enabled: false
   extraEnvVars: []
   extraVolumeMounts: []
   gitClone:
-    args: null
+    args: []
     command: []
   gitSync:
     args: []
     command: []
+    resources:
+      limits: {}
+      requests: {}
   image:
+    digest: ""
     pullPolicy: IfNotPresent
+    pullSecrets: []
     registry: docker.io
     repository: bitnami/git
-    tag: 2.32.0-debian-10-r20
+    tag: 2.40.1-debian-11-r8
   interval: 60
+  repository: ""
 clusterDomain: cluster.local
+command: []
 commonAnnotations: {}
 commonLabels: {}
 containerPorts:
   http: 8080
+  https: ""
 containerSecurityContext:
   enabled: false
   runAsNonRoot: true
   runAsUser: 1001
 customLivenessProbe: {}
 customReadinessProbe: {}
+customStartupProbe: {}
+diagnosticMode:
+  args:
+  - infinity
+  command:
+  - sleep
+  enabled: false
+existingServerBlockConfigmap: ""
+extraContainerPorts: []
 extraDeploy: []
 extraEnvVars: []
+extraEnvVarsCM: ""
+extraEnvVarsSecret: ""
 extraVolumeMounts: []
 extraVolumes: []
+fullnameOverride: ""
+global:
+  imagePullSecrets: []
+  imageRegistry: ""
 healthIngress:
   annotations: {}
-  certManager: false
   enabled: false
   extraHosts: []
+  extraPaths: []
+  extraRules: []
   extraTls: []
   hostname: example.local
+  ingressClassName: ""
+  path: /
   pathType: ImplementationSpecific
   secrets: []
+  selfSigned: false
   tls: false
 hostAliases: []
+hostIPC: false
+hostNetwork: false
 image:
   debug: false
+  digest: ""
   pullPolicy: IfNotPresent
   pullSecrets: []
   registry: docker.io
   repository: bitnami/nginx
-  tag: 1.21.0-debian-10-r21
+  tag: 1.24.0-debian-11-r10
 ingress:
   annotations: {}
-  apiVersion: null
-  certManager: false
+  apiVersion: ""
   enabled: false
+  extraHosts: []
+  extraPaths: []
+  extraRules: []
+  extraTls: []
   hostname: nginx.local
+  ingressClassName: ""
   path: /
   pathType: ImplementationSpecific
   secrets: []
+  selfSigned: false
   tls: false
-initContainers: null
-kubeVersion: null
-ldapDaemon:
-  customLivenessProbe: {}
-  customReadinessProbe: {}
-  enabled: false
-  existingNginxServerBlockSecret: null
-  image:
-    pullPolicy: IfNotPresent
-    registry: docker.io
-    repository: bitnami/nginx-ldap-auth-daemon
-    tag: 0.20200116.0-debian-10-r382
-  ldapConfig:
-    baseDN: ""
-    bindDN: ""
-    bindPassword: ""
-    filter: ""
-    httpCookieName: ""
-    httpRealm: ""
-    uri: ""
-  livenessProbe:
-    enabled: true
-    failureThreshold: 6
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    successThreshold: 1
-    timeoutSeconds: 5
-  nginxServerBlock: |-
-    server {
-    listen 0.0.0.0:{{ .Values.containerPorts.http }};
-
-    # You can provide a special subPath or the root
-    location = / {
-        auth_request /auth-proxy;
-    }
-
-    location = /auth-proxy {
-        internal;
-
-        proxy_pass http://127.0.0.1:{{ .Values.ldapDaemon.port }};
-
-        ###############################################################
-        # YOU SHOULD CHANGE THE FOLLOWING TO YOUR LDAP CONFIGURATION  #
-        ###############################################################
-
-        # URL and port for connecting to the LDAP server
-        # proxy_set_header X-Ldap-URL "ldap://YOUR_LDAP_SERVER_IP:YOUR_LDAP_SERVER_PORT";
-
-        # Base DN
-        # proxy_set_header X-Ldap-BaseDN "dc=example,dc=org";
-
-        # Bind DN
-        # proxy_set_header X-Ldap-BindDN "cn=admin,dc=example,dc=org";
-
-        # Bind password
-        # proxy_set_header X-Ldap-BindPass "adminpassword";
-    }
-    }
-  port: 8888
-  readinessProbe:
-    enabled: true
-    failureThreshold: 3
-    initialDelaySeconds: 5
-    periodSeconds: 5
-    successThreshold: 1
-    timeoutSeconds: 3
+initContainers: []
+kubeVersion: ""
+lifecycleHooks: {}
 livenessProbe:
   enabled: true
   failureThreshold: 6
@@ -136,12 +114,19 @@ livenessProbe:
 metrics:
   enabled: false
   image:
+    digest: ""
     pullPolicy: IfNotPresent
+    pullSecrets: []
     registry: docker.io
     repository: bitnami/nginx-exporter
-    tag: 0.9.0-debian-10-r87
+    tag: 0.11.0-debian-11-r82
   podAnnotations: {}
-  port: null
+  port: ""
+  prometheusRule:
+    additionalLabels: {}
+    enabled: false
+    namespace: ""
+    rules: []
   resources:
     limits: {}
     requests: {}
@@ -155,6 +140,17 @@ metrics:
     port: 9113
   serviceMonitor:
     enabled: false
+    honorLabels: false
+    interval: ""
+    jobLabel: ""
+    labels: {}
+    metricRelabelings: []
+    namespace: ""
+    relabelings: []
+    scrapeTimeout: ""
+    selector: {}
+nameOverride: ""
+namespaceOverride: ""
 nodeAffinityPreset:
   key: ""
   type: ""
@@ -162,6 +158,7 @@ nodeAffinityPreset:
 nodeSelector: {}
 pdb:
   create: false
+  maxUnavailable: 0
   minAvailable: 1
 podAffinityPreset: ""
 podAnnotations: {}
@@ -183,20 +180,46 @@ replicaCount: 1
 resources:
   limits: {}
   requests: {}
+schedulerName: ""
+serverBlock: ""
 service:
   annotations: {}
+  clusterIP: ""
   externalTrafficPolicy: Cluster
-  httpsPort: 443
+  extraPorts: []
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
   nodePorts:
     http: ""
     https: ""
-  port: 80
+  ports:
+    http: 80
+    https: 443
+  sessionAffinity: None
+  sessionAffinityConfig: {}
   targetPort:
     http: http
     https: https
   type: LoadBalancer
 serviceAccount:
   annotations: {}
+  automountServiceAccountToken: false
   create: false
-sidecars: null
-tolerations: {}
+  name: ""
+sidecarSingleProcessNamespace: false
+sidecars: []
+startupProbe:
+  enabled: false
+  failureThreshold: 6
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+staticSiteConfigmap: ""
+staticSitePVC: ""
+terminationGracePeriodSeconds: ""
+tolerations: []
+topologySpreadConstraints: []
+updateStrategy:
+  rollingUpdate: {}
+  type: RollingUpdate

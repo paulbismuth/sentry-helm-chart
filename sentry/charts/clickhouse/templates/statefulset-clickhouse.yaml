@@ -64,19 +64,6 @@ spec:
       - name: {{ . | quote }}
     {{- end }}
     {{- end }}
-      initContainers:
-      - name: init
-        image: {{ .Values.clickhouse.init.image }}:{{ .Values.clickhouse.init.imageVersion }}
-        imagePullPolicy: {{ .Values.clickhouse.init.imagePullPolicy }}
-        args:
-        - /bin/sh
-        - -c
-        - |
-          mkdir -p /etc/clickhouse-server/metrica.d
-        {{- if .Values.clickhouse.init.resources }}
-        resources:
-{{ toYaml .Values.clickhouse.init.resources | indent 10 }}
-        {{- end }}
       containers:
       - name: {{ include "clickhouse.fullname" . }}
         image: {{ .Values.clickhouse.image }}:{{ .Values.clickhouse.imageVersion }}
@@ -127,6 +114,9 @@ spec:
           mountPath: /etc/clickhouse-server/metrica.d
         - name: {{ include "clickhouse.fullname" . }}-users
           mountPath: /etc/clickhouse-server/users.d
+{{- if .Values.clickhouse.volumeMounts }}
+{{ toYaml .Values.clickhouse.volumeMounts | indent 8 }}
+{{- end }}
       {{- with .Values.clickhouse.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
@@ -139,8 +129,12 @@ spec:
           - name: metrics
             containerPort: {{ .Values.clickhouse.metrics.image.port }}
             protocol: TCP
+{{- if .Values.clickhouse.metrics.volumeMounts }}
+        volumeMounts:
+{{ toYaml .Values.clickhouse.metrics.volumeMounts | indent 8 }}
+{{- end }}
         {{- if .Values.clickhouse.metrics.resources }}
-        resources: {{- toYaml .Values.clickhouse.metrics.resources | nindent 8 }}
+        resources: {{- toYaml .Values.clickhouse.metrics.resources | nindent 10 }}
       {{- end }}
       {{- end }}
     {{- if .Values.clickhouse.nodeSelector }}
@@ -182,6 +176,9 @@ spec:
           - key: users.xml
             path: users.xml
       {{- end }}
+{{- if .Values.clickhouse.volumes }}
+{{ toYaml .Values.clickhouse.volumes | indent 6 }}
+{{- end }}
       {{- if .Values.serviceAccount.enabled }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
       {{- end }}

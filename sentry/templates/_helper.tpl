@@ -16,6 +16,7 @@
 {{- define "relay.healthCheck.requestPath" -}}/api/relay/healthcheck/live/{{- end -}}
 {{- define "snuba.port" -}}1218{{- end -}}
 {{- define "symbolicator.port" -}}3021{{- end -}}
+{{- define "vroom.port" -}}8085{{- end -}}
 
 {{- define "relay.image" -}}
 {{- default "getsentry/relay" .Values.images.relay.repository -}}
@@ -36,13 +37,19 @@
 {{- define "symbolicator.image" -}}
 {{- default "getsentry/symbolicator" .Values.images.symbolicator.repository -}}
 :
-{{- .Values.images.symbolicator.tag -}}
+{{- default .Chart.AppVersion .Values.images.symbolicator.tag -}}
 {{- end -}}
 
 {{- define "dbCheck.image" -}}
 {{- default "subfuzion/netcat" .Values.hooks.dbCheck.image.repository -}}
 :
 {{- default "latest" .Values.hooks.dbCheck.image.tag -}}
+{{- end -}}
+
+{{- define "vroom.image" -}}
+{{- default "getsentry/vroom" .Values.images.vroom.repository -}}
+:
+{{- default .Chart.AppVersion .Values.images.vroom.tag -}}
 {{- end -}}
 
 {{/*
@@ -96,6 +103,26 @@ Return if ingress is stable.
 */}}
 {{- define "sentry.ingress.isStable" -}}
   {{- eq (include "sentry.ingress.apiVersion" .) "networking.k8s.io/v1" -}}
+{{- end -}}
+
+{{/*
+Return the appropriate batch apiVersion for cronjobs.
+batch/v1beta1 will no longer be served in v1.25
+See more at https://kubernetes.io/docs/reference/using-api/deprecation-guide/#cronjob-v125
+*/}}
+{{- define "sentry.batch.apiVersion" -}}
+  {{- if and (.Capabilities.APIVersions.Has "batch/v1") (semverCompare ">= 1.21.x" (include "sentry.kubeVersion" .)) -}}
+      {{- print "batch/v1" -}}
+  {{- else if .Capabilities.APIVersions.Has "batch/v1beta1" -}}
+    {{- print "batch/v1beta1" -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Return if batch is stable.
+*/}}
+{{- define "sentry.batch.isStable" -}}
+  {{- eq (include "sentry.batch.apiVersion" .) "batch/v1" -}}
 {{- end -}}
 
 {{/*
@@ -194,7 +221,7 @@ Set postgres port
 */}}
 {{- define "sentry.postgresql.port" -}}
 {{- if .Values.postgresql.enabled -}}
-{{- default 5432 .Values.postgresql.service.port }}
+{{- default 5432 .Values.postgresql.primary.service.ports.postgresql }}
 {{- else -}}
 {{- required "A valid .Values.externalPostgresql.port is required" .Values.externalPostgresql.port -}}
 {{- end -}}
@@ -208,17 +235,6 @@ Set postgresql username
 {{- default "postgres" .Values.postgresql.postgresqlUsername }}
 {{- else -}}
 {{ required "A valid .Values.externalPostgresql.username is required" .Values.externalPostgresql.username }}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Set postgresql password
-*/}}
-{{- define "sentry.postgresql.password" -}}
-{{- if .Values.postgresql.enabled -}}
-{{- default "" .Values.postgresql.postgresqlPassword }}
-{{- else -}}
-{{ required "A valid .Values.externalPostgresql.password is required" .Values.externalPostgresql.password }}
 {{- end -}}
 {{- end -}}
 
@@ -333,13 +349,6 @@ default
 {{- end -}}
 
 {{/*
-Set ClickHouse Authorization
-*/}}
-{{- define "sentry.clickhouse.auth" -}}
---user {{ include "sentry.clickhouse.username" . }} --password {{ include "sentry.clickhouse.password" .| quote }}
-{{- end -}}
-
-{{/*
 Set ClickHouse User
 */}}
 {{- define "sentry.clickhouse.username" -}}
@@ -394,8 +403,8 @@ Set Kafka Confluent host
 Set Kafka Confluent port
 */}}
 {{- define "sentry.kafka.port" -}}
-{{- if and (.Values.kafka.enabled) (.Values.kafka.service.port) -}}
-{{- .Values.kafka.service.port }}
+{{- if and (.Values.kafka.enabled) (.Values.kafka.service.ports.client) -}}
+{{- .Values.kafka.service.ports.client }}
 {{- else if and (.Values.externalKafka) (not (kindIs "slice" .Values.externalKafka)) -}}
 {{ required "A valid .Values.externalKafka.port is required" .Values.externalKafka.port }}
 {{- end -}}
@@ -434,4 +443,133 @@ Common Snuba environment variables
   value: /etc/snuba/settings.py
 - name: DEFAULT_BROKERS
   value: {{ include "sentry.kafka.bootstrap_servers_string" . | quote }}
+{{- if .Values.externalClickhouse.existingSecret }}
+- name: CLICKHOUSE_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalClickhouse.existingSecret }}
+      key: {{ default "clickhouse-password" .Values.externalClickhouse.existingSecretKey }}
+{{- end }}
+{{- end -}}
+
+{{- define "vroom.env" -}}
+- name: SENTRY_KAFKA_BROKERS_PROFILING
+  value: {{ include "sentry.kafka.bootstrap_servers_string" . | quote }}
+- name: SENTRY_KAFKA_BROKERS_OCCURRENCES
+  value: {{ include "sentry.kafka.bootstrap_servers_string" . | quote }}
+- name: SENTRY_BUCKET_PROFILES
+  value: file://localhost//var/lib/sentry-profiles
+- name: SENTRY_SNUBA_HOST
+  value: http://{{ template "sentry.fullname" . }}-snuba:{{ template "snuba.port" . }}
+{{- end -}}
+
+{{/*
+Common Sentry environment variables
+*/}}
+{{- define "sentry.env" -}}
+- name: SNUBA
+  value: http://{{ template "sentry.fullname" . }}-snuba:{{ template "snuba.port" . }}
+- name: VROOM
+  value: http://{{ template "sentry.fullname" . }}-vroom:{{ template "vroom.port" . }}
+{{- if .Values.sentry.existingSecret }}
+- name: SENTRY_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.sentry.existingSecret }}
+      key: {{ default "key" .Values.sentry.existingSecretKey }}
+{{- else }}
+- name: SENTRY_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ template "sentry.fullname" . }}-sentry-secret
+      key: "key"
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+- name: POSTGRES_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ default (include "sentry.postgresql.fullname" .) .Values.postgresql.auth.existingSecret }}
+      key: {{ default "postgres-password" .Values.postgresql.auth.secretKeys.adminPasswordKey }}
+{{- else if .Values.externalPostgresql.password }}
+- name: POSTGRES_PASSWORD
+  value: {{ .Values.externalPostgresql.password | quote }}
+{{- else if .Values.externalPostgresql.existingSecret }}
+- name: POSTGRES_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalPostgresql.existingSecret }}
+      key: {{ default "postgresql-password" .Values.externalPostgresql.existingSecretKey }}
+{{- end }}
+{{- if and (eq .Values.filestore.backend "gcs") .Values.filestore.gcs.secretName }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: /var/run/secrets/google/{{ .Values.filestore.gcs.credentialsFile }}
+{{- end }}
+{{- if .Values.mail.password }}
+- name: SENTRY_EMAIL_PASSWORD
+  value: {{ .Values.mail.password | quote }}
+{{- else if .Values.mail.existingSecret }}
+- name: SENTRY_EMAIL_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.mail.existingSecret }}
+      key: {{ default "mail-password" .Values.mail.existingSecretKey }}
+{{- end }}
+{{- if .Values.slack.existingSecret }}
+- name: SLACK_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.slack.existingSecret }}
+      key: "client-id"
+- name: SLACK_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.slack.existingSecret }}
+      key: "client-secret"
+- name: SLACK_SIGNING_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.slack.existingSecret }}
+      key: "signing-secret"
+{{- end }}
+{{- if and .Values.github.existingSecret }}
+- name: GITHUB_APP_PRIVATE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.github.existingSecret }}
+      key: {{ default "private-key" .Values.github.existingSecretPrivateKeyKey }}
+- name: GITHUB_APP_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.github.existingSecret }}
+      key: {{ default "webhook-secret" .Values.github.existingSecretWebhookSecretKey }}
+- name: GITHUB_APP_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.github.existingSecret }}
+      key: {{ default "client-id" .Values.github.existingSecretClientIdKey }}
+- name: GITHUB_APP_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.github.existingSecret }}
+      key: {{ default "client-secret" .Values.github.existingSecretClientSecretKey }}
+{{- end }}
+{{- if .Values.google.existingSecret }}
+- name: GOOGLE_AUTH_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.google.existingSecret }}
+      key: {{ default "client-id" .Values.google.existingSecretClientIdKey }}
+- name: GOOGLE_AUTH_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.google.existingSecret }}
+      key: {{ default "client-secret" .Values.google.existingSecretClientSecretKey }}
+{{- end }}
+{{- if .Values.openai.existingSecret }}
+- name: OPENAI_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.openai.existingSecret }}
+      key: {{ default "api-token" .Values.openai.existingSecretKey }}
+{{- end }}
 {{- end -}}

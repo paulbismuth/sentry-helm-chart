@@ -29,6 +29,9 @@ spec:
         app: {{ template "sentry.fullname" . }}-metrics
         release: "{{ .Release.Name }}"
         role: metrics
+        {{- if .Values.metrics.podLabels }}
+{{ toYaml .Values.metrics.podLabels | indent 8 }}
+        {{- end }}
     spec:
       {{- if .Values.metrics.affinity }}
       affinity:
@@ -68,6 +71,10 @@ spec:
           containerPort: 9125
         - name: metrics
           containerPort: 9102
+{{- if .Values.metrics.volumeMounts }}
+        volumeMounts:
+{{ toYaml .Values.metrics.volumeMounts | indent 8 }}
+{{- end }}
 {{- if .Values.metrics.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
@@ -94,6 +101,15 @@ spec:
 {{- end }}
         resources:
 {{ toYaml .Values.metrics.resources | indent 10 }}
+{{- if .Values.metrics.containerSecurityContext }}
+        securityContext:
+{{ toYaml .Values.metrics.containerSecurityContext | indent 10 }}
+{{- end }}
+{{- if .Values.metrics.volumes }}
+      volumes:
+{{ toYaml .Values.metrics.volumes | indent 6 }}
+{{- end }}
+
       {{- if .Values.serviceAccount.enabled }}
       serviceAccountName: {{ .Values.serviceAccount.name }}-metrics
       {{- end }}
